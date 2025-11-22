@@ -6,4 +6,4 @@
 will update this README, checkout later on
 
 ---
-*I will write about it [here](rajatdahal.com.np).*
+*I will write about it [here](https://rajatdahal.com.np).*
