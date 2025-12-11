@@ -129,7 +129,7 @@ int main(int argc, char *argv[]) {
     case OP_LD: {
       uint16_t PCoffset9 = sign_extend(instr & 0x1FF, 9);
       uint16_t r0 = (instr >> 9) & 0x7;
-      r0 = mem_read(reg[R_PC] + PCoffset9);
+      reg[r0] = mem_read(reg[R_PC] + PCoffset9);
       update_flags(r0);
 
       break;
@@ -149,6 +149,20 @@ int main(int argc, char *argv[]) {
     }
 
     case OP_AND: {
+      uint16_t r0 = (instr >> 9) & 0x7;
+      // first operand
+      uint16_t r1 = (instr >> 6) & 0x7;
+      // checking for immediate mode
+      uint16_t imm_flag = (instr >> 5) & 0x1;
+
+      if (imm_flag) {
+        uint16_t imm5 = sign_extend(instr & 0x1F, 5); // 0x1F is 0001 1111
+        reg[r0] = reg[r1] & imm5;
+      } else {
+        uint16_t r2 = instr & 0x7;
+        reg[r0] = reg[r1] & reg[r2];
+      }
+      update_flags(r0);
       break;
     }
 
