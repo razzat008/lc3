@@ -1,5 +1,6 @@
 #include "definitions.h"
 #include "stdlib.h"
+#include <locale>
 #include <signal.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -145,6 +146,15 @@ int main(int argc, char *argv[]) {
     }
 
     case OP_JSR: {
+      reg[R_R7] = reg[R_PC];
+      uint16_t flag = (instr >> 11) & 1;
+      if (flag) {
+        uint16_t pc_offset = sign_extend(instr & 0x7FF, 11);
+        reg[R_PC] += pc_offset; // JSR
+      } else {
+        uint16_t baseR = (instr >> 6) & 0x7;
+        reg[R_PC] = baseR; // JSRR
+      }
       break;
     }
 
@@ -171,7 +181,7 @@ int main(int argc, char *argv[]) {
       uint16_t r0 = (instr >> 6) & 0x7; // baseR
       uint16_t r1 = (instr >> 9) & 0x7; // DR
 
-      r1 = mem_read(r0 + offset6);
+      reg[r1] = mem_read(reg[r0] + offset6);
       update_flags(r1);
       break;
     }
@@ -186,15 +196,11 @@ int main(int argc, char *argv[]) {
       break;
     }
 
-    case OP_RTI: {
-      break;
-    }
-
     case OP_NOT: {
       uint16_t r0 = (instr >> 6) & 0x7; // source register
       uint16_t r1 = (instr >> 9) & 0x7; // destination register
 
-      r1 = ~r0;
+      reg[r1] = ~reg[r0];
       update_flags(r1);
       break;
     }
@@ -202,7 +208,7 @@ int main(int argc, char *argv[]) {
     case OP_LDI: {
       uint16_t PCoffset9 = sign_extend(instr & 0x1FF, 9);
       uint16_t r0 = (instr >> 9) & 0x7;
-      r0 = mem_read(mem_read(reg[R_PC] + PCoffset9));
+      reg[r0] = mem_read(mem_read(reg[R_PC] + PCoffset9));
       update_flags(r0);
       break;
     }
@@ -218,18 +224,14 @@ int main(int argc, char *argv[]) {
     case OP_JMP: {
       uint16_t r1 = (instr >> 6) & 0x7;
       // program counter now has next instruction to be jumped on to
-      reg[R_PC] = r1;
-      break;
-    }
-
-    case OP_RES: {
+      reg[R_PC] = reg[r1];
       break;
     }
 
     case OP_LEA: {
       uint16_t PCoffset9 = sign_extend(instr & 0x1FF, 9);
       uint16_t r0 = (instr >> 9) & 0x7;
-      r0 = mem_read(reg[R_PC] + PCoffset9);
+      reg[r0] = reg[R_PC] + PCoffset9;
       update_flags(r0);
       break;
     }
