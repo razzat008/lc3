@@ -1,7 +1,7 @@
 #include <cstdint>
 #define MEMORY_MAX (1 << 16)
 
-uint16_t memory[MEMORY_MAX]; // array of possible addresses
+inline uint16_t memory[MEMORY_MAX]; // array of possible addresses
 
 enum {
   R_R0 = 0,
@@ -17,7 +17,7 @@ enum {
   R_COUNT
 };
 
-uint16_t reg[R_COUNT]; // array of registers
+inline uint16_t reg[R_COUNT]; // array of registers
 
 enum {
   OP_BR = 0, /* Branch */
