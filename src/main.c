@@ -240,6 +240,60 @@ int main(int argc, char *argv[]) {
       uint16_t trapvect8 = (instr & 0xFF) | 0x0;
       reg[R_R7] = reg[R_PC];
       reg[R_PC] = mem_read(trapvect8);
+      switch (instr & 0xFF) {
+
+      case TRAP_GETC:
+        reg[R_R0] = (uint16_t)getchar();
+        update_flags(R_R0);
+        break;
+
+      case TRAP_OUT:
+        putc((char)reg[R_R0], stdout);
+        fflush(stdout);
+        break;
+
+      case TRAP_PUTS: {
+        uint16_t *c = memory + reg[R_R0];
+        while (*c) {
+          putc((char)*c, stdout);
+          ++c;
+        }
+        fflush(stdout);
+      } break;
+
+      case TRAP_IN:
+        printf("Enter a char type:");
+        char c = getchar();
+        putc(c, stdout);
+        fflush(stdout);
+        reg[R_R0] = (uint16_t)c;
+        update_flags(R_R0);
+        break;
+
+      case TRAP_PUTSP: {
+        uint16_t *c = memory + reg[R_R0];
+        while (*c) {
+          // first character lower 8 bits
+          // xxxxxxxxssssssss & 0xFF => 00000000ssssssss
+          char char1 = (*c) & 0xFF;
+          putc(char1, stdout);
+          // second character upper 8 bits
+          char char2 =
+              (*c) >> 8; // shifting right by eight bits 00000000xxxxxxxx
+          if (char2) {
+            putc(char2, stdout);
+          }
+          ++c;
+        }
+        fflush(stdout);
+      } break;
+
+      case TRAP_HALT:
+        puts("HALT");
+        fflush(stdout);
+        running = 0;
+        break;
+      }
       break;
     }
     }
