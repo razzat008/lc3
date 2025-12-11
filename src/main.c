@@ -24,6 +24,17 @@ void handle_interrupt(int signal) {
 }
 uint16_t sign_extend(uint16_t, int);
 void update_flags(uint16_t);
+uint16_t mem_read(uint16_t);
+uint16_t mem_read(uint16_t address) {
+  return memory[address];
+} // reading from memory
+void mem_write(uint16_t, uint16_t);
+void mem_write(uint16_t address, uint16_t value) {
+  memory[address] = value;
+} // assigning values
+
+uint16_t read_image(char *);
+void disable_input_buffering();
 int main(int argc, char *argv[]) {
 
   signal(SIGINT, handle_interrupt);
@@ -35,7 +46,7 @@ int main(int argc, char *argv[]) {
   }
 
   for (int i = 1; i < argc; ++i) {
-    if (!read_image([argv[j])) {
+    if (!read_image(argv[i])) {
       printf("failed to load image:%s\n", argv[i]);
       exit(1);
     }
@@ -104,14 +115,32 @@ int main(int argc, char *argv[]) {
     }
 
     case OP_BR: {
+
+      uint16_t PCoffset9 =
+          sign_extend(instr & 0x1FF, 9); // checking if negative value
+
+      uint16_t n_z_p_flag = (instr >> 9) & 0x7;
+      if (n_z_p_flag & reg[R_COND]) {
+        reg[R_PC] += PCoffset9;
+      }
       break;
     }
 
     case OP_LD: {
+      uint16_t PCoffset9 = sign_extend(instr & 0x1FF, 9);
+      uint16_t r0 = (instr >> 9) & 0x7;
+      r0 = mem_read(reg[R_PC] + PCoffset9);
+      update_flags(r0);
+
       break;
     }
 
     case OP_ST: {
+      uint16_t PCoffset9 = sign_extend(instr & 0x1FF, 9);
+      uint16_t r0 = (instr >> 9) & 0x7;
+      // mem_read(reg[R_PC] + PCoffset9) = r0;
+
+      mem_write(reg[R_PC] + PCoffset9, reg[r0]); // assigning value to SR
       break;
     }
 
@@ -124,10 +153,22 @@ int main(int argc, char *argv[]) {
     }
 
     case OP_LDR: {
+      uint16_t offset6 = sign_extend(instr & 0x3F, 6);
+      uint16_t r0 = (instr >> 6) & 0x7; // baseR
+      uint16_t r1 = (instr >> 9) & 0x7; // DR
+
+      r1 = mem_read(r0 + offset6);
+      update_flags(r1);
       break;
     }
 
     case OP_STR: {
+      uint16_t offset6 = sign_extend(instr & 0x3F, 6);
+      uint16_t r0 = (instr >> 6) & 0x7; // baseR
+      uint16_t r1 = (instr >> 9) & 0x7; // SR
+      // mem[BaseR + SEXT(offset6)] = SR
+
+      mem_write(reg[0] + offset6, reg[r1]);
       break;
     }
 
@@ -136,18 +177,34 @@ int main(int argc, char *argv[]) {
     }
 
     case OP_NOT: {
+      uint16_t r0 = (instr >> 6) & 0x7; // source register
+      uint16_t r1 = (instr >> 9) & 0x7; // destination register
+
+      r1 = ~r0;
+      update_flags(r1);
       break;
     }
 
     case OP_LDI: {
+      uint16_t PCoffset9 = sign_extend(instr & 0x1FF, 9);
+      uint16_t r0 = (instr >> 9) & 0x7;
+      r0 = mem_read(mem_read(reg[R_PC] + PCoffset9));
+      update_flags(r0);
       break;
     }
 
     case OP_STI: {
+      uint16_t PCoffset9 = sign_extend(instr & 0x1FF, 9);
+      uint16_t r0 = (instr >> 9) & 0x7;
+      mem_write(reg[R_PC] + PCoffset9, reg[r0]);
+
       break;
     }
 
     case OP_JMP: {
+      uint16_t r1 = (instr >> 6) & 0x7;
+      // program counter now has next instruction to be jumped on to
+      reg[R_PC] = r1;
       break;
     }
 
@@ -156,10 +213,17 @@ int main(int argc, char *argv[]) {
     }
 
     case OP_LEA: {
+      uint16_t PCoffset9 = sign_extend(instr & 0x1FF, 9);
+      uint16_t r0 = (instr >> 9) & 0x7;
+      r0 = mem_read(reg[R_PC] + PCoffset9);
+      update_flags(r0);
       break;
     }
 
     case OP_TRAP: {
+      uint16_t trapvect8 = (instr & 0xFF) | 0x0;
+      reg[R_R7] = reg[R_PC];
+      reg[R_PC] = mem_read(trapvect8);
       break;
     }
     }
@@ -170,7 +234,7 @@ int main(int argc, char *argv[]) {
 }
 
 uint16_t sign_extend(uint16_t x, int bit_count) {
-  // checking if the 7th bit is 1; and if it is, then
+  // checking if most significant bit (MSB) is 1
   if ((x >> (bit_count - 1)) & 1) {
     x |= (0xFFFF << bit_count);
   }
@@ -186,3 +250,4 @@ void update_flags(uint16_t r) {
   } else {
     reg[R_COND] = FL_POS;
   }
+}
