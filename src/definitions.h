@@ -1,7 +1,14 @@
-#include <cstdint>
+#include <stdint.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/time.h>
+#include <sys/types.h>
+#include <sys/termios.h>
+#include <sys/mman.h>
 #define MEMORY_MAX (1 << 16)
 
-inline uint16_t memory[MEMORY_MAX]; // array of possible addresses
+uint16_t memory[MEMORY_MAX]; // array of possible addresses
 
 enum {
   R_R0 = 0,
@@ -17,7 +24,7 @@ enum {
   R_COUNT
 };
 
-inline uint16_t reg[R_COUNT]; // array of registers
+uint16_t reg[R_COUNT]; // array of registers
 
 enum {
   OP_BR = 0, /* Branch */
@@ -51,4 +58,9 @@ enum {
   TRAP_IN = 0x23,   // get character from keyboard, echoed onto the terminal
   TRAP_PUTSP = 0x24, // output a byte string
   TRAP_HALT = 0x25,  // halt the program
+};
+
+enum {
+  MR_KBSR = 0xFE00, // keyboard status
+  MR_KBDR = 0xFE02  // keyboard data
 };
